@@ -1,4 +1,4 @@
-## It is great you'd like to contribute!
+# It is great you'd like to contribute
 
 First, thank you!
 
