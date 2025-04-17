@@ -8,8 +8,10 @@ on:
     branches: [master]
 
 jobs:
-  build:
+  build_with_prebuild_h3:
     runs-on: ubuntu-latest
+    env:
+      H3_INSTALL_PREFIX: ${{ github.workspace }}/h3_inst
     steps:
       - uses: actions/checkout@v2
       - name: Install h3 build deps
@@ -21,11 +23,29 @@ jobs:
           path: h3
           ref: v4.2.1
       - name: Generate build folder for uber/h3
-        run: cmake -S h3 -B h3_build
+        run: cmake -S h3 -B h3_build -DCMAKE_BUILD_TYPE=Release
       - name: Build uber/h3
         run: cmake --build h3_build --parallel 8
       - name: Install uber/h3
-        run: cmake --install ./h3_build --prefix $HOME/.local
+        run: cmake --install ./h3_build --prefix $H3_INSTALL_PREFIX
+      - name: Build libh3
+        run: cargo build --verbose --no-default-features
+      - name: Test libh3
+        run: cargo test --verbose --no-default-features
+
+  build_from_scratch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build libh3
+        run: cargo build --verbose
+      - name: Test libh3
+        run: cargo test --verbose
+
+  build_win_from_scratch:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
       - name: Build libh3
         run: cargo build --verbose
       - name: Test libh3

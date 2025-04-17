@@ -35,25 +35,26 @@ pub enum H3Err {
     InvalidErrCode, // H3ErrorCodes from libh3 is invalid
 }
 
-impl From<libh3_sys::H3ErrorCodes> for H3Err {
-    fn from(value: libh3_sys::H3ErrorCodes) -> Self {
+#[allow(non_snake_case, unused_variables, unreachable_patterns)]
+impl From<libh3_sys::H3Error> for H3Err {
+    fn from(value: libh3_sys::H3Error) -> Self {
         match value {
-            0 => H3Err::Success,
-            1 => H3Err::Failed,
-            2 => H3Err::Domain,
-            3 => H3Err::LatLngDomain,
-            4 => H3Err::ResDomain,
-            5 => H3Err::CellInvalid,
-            6 => H3Err::DirEdgeInvalid,
-            7 => H3Err::UndirEdgeInvalid,
-            8 => H3Err::VertexInvalid,
-            9 => H3Err::Pentagon,
-            10 => H3Err::DuplicateInput,
-            11 => H3Err::NotNeighbors,
-            12 => H3Err::ResMismatch,
-            13 => H3Err::MemoryAlloc,
-            14 => H3Err::MemoryBounds,
-            15 => H3Err::OptionInvalid,
+            H3ErrorCodes_E_SUCCESS => H3Err::Success,
+            H3ErrorCodes_E_FAILED => H3Err::Failed,
+            H3ErrorCodes_E_DOMAIN => H3Err::Domain,
+            H3ErrorCodes_E_LATLNG_DOMAIN => H3Err::LatLngDomain,
+            H3ErrorCodes_E_RES_DOMAIN => H3Err::ResDomain,
+            H3ErrorCodes_E_CELL_INVALID => H3Err::CellInvalid,
+            H3ErrorCodes_E_DIR_EDGE_INVALID => H3Err::DirEdgeInvalid,
+            H3ErrorCodes_E_UNDIR_EDGE_INVALID => H3Err::UndirEdgeInvalid,
+            H3ErrorCodes_E_VERTEX_INVALID => H3Err::VertexInvalid,
+            H3ErrorCodes_E_PENTAGON => H3Err::Pentagon,
+            H3ErrorCodes_E_DUPLICATE_INPUT => H3Err::DuplicateInput,
+            H3ErrorCodes_E_NOT_NEIGHBORS => H3Err::NotNeighbors,
+            H3ErrorCodes_E_RES_MISMATCH => H3Err::ResMismatch,
+            H3ErrorCodes_E_MEMORY_ALLOC => H3Err::MemoryAlloc,
+            H3ErrorCodes_E_MEMORY_BOUNDS => H3Err::MemoryBounds,
+            H3ErrorCodes_E_OPTION_INVALID => H3Err::OptionInvalid,
             _else => H3Err::InvalidErrCode,
         }
     }
@@ -80,7 +81,7 @@ pub fn rads_to_degs(radians: f64) -> f64 {
 }
 
 /// Represent a coordinate
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GeoCoord {
     // The latitute of the coordinate, typcially this should be specified using
     // radians but it is easy to convert using [degs_to_rads](degs_to_rads)
@@ -261,10 +262,10 @@ pub fn h3_to_geo_boundary(h3: H3Index) -> Result<CellBoundary, H3Err> {
         error => return Err(error),
     }
     let boundary = unsafe { boundary_result.assume_init() };
-    let mut result = Vec::with_capacity(boundary.numVerts as usize);
-    for i in 0..boundary.numVerts as usize {
-        result.push(GeoCoord::new(boundary.verts[i].lat, boundary.verts[i].lng));
-    }
+    let result = boundary.verts[0..boundary.numVerts as usize]
+        .iter()
+        .map(|&vert| GeoCoord::new(vert.lat, vert.lng))
+        .collect();
     Ok(CellBoundary { vec: result })
 }
 
@@ -285,13 +286,6 @@ pub fn h3_get_resolution(h3: H3Index) -> Resolution {
     unsafe { libh3_sys::getResolution(h3) as Resolution }
 }
 
-fn to_bool(from: ::std::os::raw::c_int) -> bool {
-    match from {
-        0 => false,
-        _else => true,
-    }
-}
-
 /// Determine if H3 index is valid
 ///
 /// ```
@@ -306,7 +300,7 @@ fn to_bool(from: ::std::os::raw::c_int) -> bool {
 /// # Ok::<(), libh3::H3Err>(())
 /// ```
 pub fn h3_is_valid(h3: H3Index) -> bool {
-    to_bool(unsafe { libh3_sys::isValidCell(h3) })
+    (unsafe { libh3_sys::isValidCell(h3) } != 0)
 }
 
 /// Determine if two H3 indexes are neighbors
@@ -325,7 +319,7 @@ pub fn h3_is_valid(h3: H3Index) -> bool {
 pub fn h3_indexes_are_neighbors(origin: H3Index, destination: H3Index) -> Result<bool, H3Err> {
     let mut out: ::std::os::raw::c_int = 0;
     match unsafe { libh3_sys::areNeighborCells(origin, destination, &mut out) }.into() {
-        H3Err::Success => Ok(to_bool(out)),
+        H3Err::Success => Ok(out != 0),
         error => Err(error),
     }
 }
@@ -353,7 +347,7 @@ pub fn hex_area_km_2(resolution: i32) -> Result<f64, H3Err> {
 /// # Ok::<(), libh3::H3Err>(())
 /// ```
 pub fn h3_is_pentagon(h3: H3Index) -> bool {
-    to_bool(unsafe { libh3_sys::isPentagon(h3) })
+    (unsafe { libh3_sys::isPentagon(h3) } != 0)
 }
 
 /// Get the number of the base cell for a given H3 index
@@ -397,14 +391,12 @@ pub fn k_ring(origin: H3Index, radius: HexDistance) -> Result<Vec<H3Index>, H3Er
         error => return Err(error),
     }
 
-    let mut r = Vec::<H3Index>::with_capacity(max as usize);
+    let mut r: Vec<H3Index> = vec![0; max as usize];
     match unsafe { libh3_sys::gridDisk(origin, radius, r.as_mut_ptr()) }.into() {
         H3Err::Success => {}
         error => return Err(error),
     }
-
-    unsafe { r.set_len(max as usize) };
-    r = r.into_iter().filter(|v| *v != 0).collect();
+    r.retain(|v| *v != 0);
     Ok(r)
 }
 
@@ -440,9 +432,8 @@ pub fn k_ring_distances(
         error => return Err(error),
     }
 
-    let mut indexes = Vec::<H3Index>::with_capacity(max as usize);
-    let mut distances = Vec::<HexDistance>::with_capacity(max as usize);
-
+    let mut indexes: Vec<H3Index> = vec![0; max as usize];
+    let mut distances: Vec<HexDistance> = vec![0; max as usize];
     match unsafe {
         libh3_sys::gridDiskDistances(origin, radius, indexes.as_mut_ptr(), distances.as_mut_ptr())
     }
@@ -451,14 +442,11 @@ pub fn k_ring_distances(
         H3Err::Success => {}
         error => return Err(error),
     }
-    unsafe { indexes.set_len(max as usize) };
-    unsafe { distances.set_len(max as usize) };
 
-    Ok(indexes
-        .into_iter()
-        .zip(distances.into_iter())
-        .filter(|v| v.0 != 0)
-        .collect::<Vec<(H3Index, HexDistance)>>())
+    let mut collection =
+        std::iter::zip(indexes, distances).collect::<Vec<(H3Index, HexDistance)>>();
+    collection.retain(|v| v.0 != 0);
+    Ok(collection)
 }
 
 /// Produce indexes within k distance of the origin index.
@@ -480,13 +468,13 @@ pub fn hex_range(origin: H3Index, k_ring: HexDistance) -> Result<Vec<H3Index>, H
         H3Err::Success => {}
         error => return Err(error),
     }
-    let mut r = Vec::<H3Index>::with_capacity(max as usize);
+
+    let mut r: Vec<H3Index> = vec![0; max as usize];
     match unsafe { libh3_sys::gridDiskUnsafe(origin, k_ring, r.as_mut_ptr()) }.into() {
         H3Err::Success => {}
         error => return Err(error),
     }
-    unsafe { r.set_len(max as usize) };
-    r = r.into_iter().filter(|v| *v != 0).collect();
+    r.retain(|v| *v != 0);
     Ok(r)
 }
 
@@ -502,8 +490,8 @@ pub fn hex_range_distances(
         error => return Err(error),
     }
 
-    let mut indexes = Vec::<H3Index>::with_capacity(max as usize);
-    let mut distances = Vec::<HexDistance>::with_capacity(max as usize);
+    let mut indexes: Vec<H3Index> = vec![0; max as usize];
+    let mut distances: Vec<HexDistance> = vec![0; max as usize];
     match unsafe {
         libh3_sys::gridDiskDistancesUnsafe(
             origin,
@@ -522,7 +510,7 @@ pub fn hex_range_distances(
 
     let result = indexes
         .into_iter()
-        .zip(distances.into_iter())
+        .zip(distances)
         .filter(|v| v.0 != 0)
         .collect::<Vec<(H3Index, HexDistance)>>();
     Ok(result)
@@ -545,7 +533,7 @@ pub fn h3_distance(origin: H3Index, end: H3Index) -> Result<i64, H3Err> {
     let mut distance = 0i64;
     match unsafe { libh3_sys::gridDistance(origin, end, &mut distance) }.into() {
         H3Err::Success => Ok(distance),
-        error => return Err(error),
+        error => Err(error),
     }
 }
 
@@ -609,7 +597,12 @@ pub fn polyfill(
 
     let mut max = 0i64;
     match unsafe {
-        libh3_sys::maxPolygonToCellsSizeExperimental(&p, resolution as i32, 0, &mut max)
+        libh3_sys::maxPolygonToCellsSizeExperimental(
+            &p,
+            resolution as ::std::os::raw::c_int,
+            0,
+            &mut max,
+        )
     }
     .into()
     {
@@ -617,16 +610,21 @@ pub fn polyfill(
         error => return Err(error),
     }
 
-    let mut r = Vec::<H3Index>::with_capacity(max as usize);
+    let mut r: Vec<H3Index> = vec![0; max as usize];
     match unsafe {
-        libh3_sys::polygonToCellsExperimental(&p, resolution as i32, 0, max, r.as_mut_ptr())
+        libh3_sys::polygonToCellsExperimental(
+            &p,
+            resolution as ::std::os::raw::c_int,
+            0,
+            max,
+            r.as_mut_ptr(),
+        )
     }
     .into()
     {
         H3Err::Success => {}
         error => return Err(error),
     }
-    unsafe { r.set_len(max as usize) };
     r.retain(|&v| v != 0);
     Ok(r)
 }
@@ -696,12 +694,11 @@ pub fn h3_to_parent(h: H3Index, resolution: Resolution) -> Result<H3Index, H3Err
 /// ```
 pub fn h3_to_children(h: H3Index, resolution: Resolution) -> Result<Vec<H3Index>, H3Err> {
     let max = max_h3_to_children_size(h, resolution)?;
-    let mut result = Vec::<H3Index>::with_capacity(max as usize);
+    let mut result: Vec<H3Index> = vec![0; max as usize];
     match unsafe { libh3_sys::cellToChildren(h, resolution as i32, result.as_mut_ptr()) }.into() {
         H3Err::Success => {}
         error => return Err(error),
     }
-    unsafe { result.set_len(max as usize) };
     Ok(result)
 }
 
@@ -728,12 +725,11 @@ pub fn res_0_index_count() -> i32 {
 /// ```
 pub fn get_res_0_indexes() -> Result<Vec<H3Index>, H3Err> {
     let max = res_0_index_count() as usize;
-    let mut result = Vec::<H3Index>::with_capacity(max as usize);
+    let mut result: Vec<H3Index> = vec![0; max as usize];
     match unsafe { libh3_sys::getRes0Cells(result.as_mut_ptr()) }.into() {
         H3Err::Success => {}
         error => return Err(error),
     }
-    unsafe { result.set_len(max) };
     Ok(result)
 }
 
