@@ -1,12 +1,38 @@
 [package]
 name = "libh3"
-version = "0.1.8"
-authors = ["Rusty Conover <rusty@conover.me>"]
+version = "0.2.1"
+authors = ["Rusty Conover <rusty@conover.me>", "Ricky <ricky85ps@web.de>"]
 edition = "2018"
 license = "MIT"
-repository = "https://github.com/rustyconover/libh3.git"
+repository = "https://github.com/ricky85ps/libh3.git"
 description = "Safe Rust Bindings to Uber's Hexagonal Hierarchical Spatial Index - H3"
 
+[build-dependencies]
+bindgen = { version = "0.71.1" }
+cmake = { version = "0.1.54", optional = true }
+flate2 = { version = "1.1.1", optional = true }
+hex = { version = "0.4.3", optional = true }
+reqwest = { version = "0.12.15", features = ["blocking"], optional = true }
+sha2 = { version = "0.10.8", optional = true }
+tar = { version = "0.4.44", optional = true }
+toml = { version = "0.8.20", optional = true }
+
 [dependencies]
-libh3-sys = "0.1.3"
-float-cmp = "0.6.0"
+static_assertions = "1.1.0"
+
+[package.metadata.h3-sources]
+targz_url = "https://github.com/uber/h3/archive/refs/tags/v4.2.1.tar.gz"
+targz_sha512sum = "1d04644d8e5b6d1a9a741e6289ef65ca3dfe7c9e26b1f70d9e59a37d1e8fc1e686e27d5f6464efafca4a83755dbec9f755ee9dc11c88610cdd618c933d32d27d"
+targz_root_dir = "h3-4.2.1"
+
+[features]
+default = ["uber_h3_from_scratch"]
+uber_h3_from_scratch = [
+    "dep:cmake",
+    "dep:flate2",
+    "dep:hex",
+    "dep:reqwest",
+    "dep:sha2",
+    "dep:tar",
+    "dep:toml",
+]
