@@ -1,6 +1,6 @@
 [package]
 name = "libh3"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Rusty Conover <rusty@conover.me>", "Ricky <ricky85ps@web.de>"]
 edition = "2018"
 license = "MIT"
