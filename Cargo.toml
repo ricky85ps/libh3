@@ -1,8 +1,9 @@
 [package]
 name = "libh3"
-version = "0.2.2"
+version = "0.2.3-beta.0"
 authors = ["Rusty Conover <rusty@conover.me>", "Ricky <ricky85ps@web.de>"]
 edition = "2018"
+readme = "README.md"
 license = "MIT"
 repository = "https://github.com/ricky85ps/libh3.git"
 description = "Safe Rust Bindings to Uber's Hexagonal Hierarchical Spatial Index - H3"
@@ -19,6 +20,10 @@ toml = { version = "0.8.20", optional = true }
 
 [dependencies]
 static_assertions = "1.1.0"
+
+[package.metadata.docs.rs]
+no-default-features = true
+
 
 [package.metadata.h3-sources]
 targz_url = "https://github.com/uber/h3/archive/refs/tags/v4.2.1.tar.gz"

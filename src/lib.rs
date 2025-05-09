@@ -1,5 +1,6 @@
 extern crate static_assertions;
 
+#[cfg(not(docsrs))]
 mod libh3_sys {
     #![allow(improper_ctypes)]
     #![allow(unused)]
@@ -11,7 +12,9 @@ mod libh3_sys {
 use std::convert::From;
 use std::mem::MaybeUninit;
 
+#[cfg(docsrs)]
 static_assertions::const_assert_eq!(libh3_sys::H3_VERSION_MAJOR, 4);
+#[cfg(docsrs)]
 static_assertions::const_assert!(libh3_sys::H3_VERSION_MINOR >= 2);
 
 #[derive(Debug)]
