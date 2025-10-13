@@ -1,3 +1,5 @@
+use build_print::println;
+
 #[cfg(feature = "uber_h3_from_scratch")]
 mod uber_h3_from_scratch {
     use sha2::Digest;
@@ -13,7 +15,7 @@ mod uber_h3_from_scratch {
         hasher.update(&file_content);
         let checksum = hasher.finalize();
         let sha512 = hex::decode(sha512).expect("Checksum not valid HEX!");
-        if &checksum[..] != &sha512[..] {
+        if checksum[..] != sha512[..] {
             panic!(
                 "Checksum for {} invalid {:?} != {:?}",
                 dest,
@@ -77,7 +79,7 @@ mod uber_h3_from_scratch {
         let src_dir = out_dir.join("uber");
 
         let info = from_toml("Cargo.toml");
-        let targz_name = Path::new(&info.targz_url).iter().last().unwrap();
+        let targz_name = Path::new(&info.targz_url).iter().next_back().unwrap();
 
         std::fs::create_dir_all(&src_dir)?;
         let dwnld_dest = out_dir.join(targz_name);
@@ -105,6 +107,18 @@ fn from_env() -> std::path::PathBuf {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let docs_rs = std::env::var("DOCS_RS");
+    if docs_rs.is_ok() && docs_rs.unwrap() != "0" {
+        println!("Nothing to build due to DOCS_RS");
+        return Ok(());
+    }
+    #[cfg(docsrs)]
+    {
+        println!("Nothing to build due to cfg(docsrs)");
+        return Ok(());
+    }
+
+    println!("Running build.rs");
     #[cfg(not(feature = "uber_h3_from_scratch"))]
     let h3_inst_prefix = from_env();
 
