@@ -90,8 +90,20 @@ mod uber_h3_from_scratch {
         }
         untar(dwnld_dest.to_str().unwrap(), src_dir.to_str().unwrap());
 
+        let build_type = if cfg!(debug_assertions) {
+            "Debug"
+        } else {
+            "Release"
+        };
         let dst = cmake::Config::new(src_dir.join(info.targz_root_dir))
-            .profile("Release")
+            .define("BUILD_TESTING", "OFF")
+            .define("BUILD_GENERATORS", "OFF")
+            .define("BUILD_BENCHMARKS", "OFF")
+            .define("BUILD_FILTERS", "OFF")
+            .define("ENABLE_LINTING", "OFF")
+            .define("ENABLE_DOCS", "OFF")
+            .define("ENABLE_COVERAGE", "OFF")
+            .profile(build_type)
             .build();
         Ok(dst)
     }
