@@ -1,6 +1,5 @@
 .vscode
 target
-Cargo.lock
 src/libh3_sys.rs
 h3
 h3_build
