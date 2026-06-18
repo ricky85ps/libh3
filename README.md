@@ -42,7 +42,7 @@ To build from sources do following steps:
 
 ```bash
 sudo apt install git cmake make gcc libtool
-git clone --depth=1 --branch v4.2.1 https://github.com/uber/h3.git
+git clone --depth=1 --branch v4.5.0 https://github.com/uber/h3.git
 export H3_INSTALL_PREFIX=$PWD/h3_inst
 cmake -S h3 -B h3_build
 cmake --build h3_build --parallel 8

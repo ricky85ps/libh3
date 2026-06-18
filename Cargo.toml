@@ -1,6 +1,6 @@
 [package]
 name = "libh3"
-version = "0.2.4"
+version = "0.3.0"
 authors = ["Rusty Conover <rusty@conover.me>", "Ricky <ricky85ps@web.de>"]
 edition = "2021"
 rust-version = "1.70"
@@ -22,9 +22,9 @@ toml = { version = "1.1.2+spec-1.1.0", optional = true }
 static_assertions = "1.1.0"
 
 [package.metadata.h3-sources]
-targz_url = "https://github.com/uber/h3/archive/refs/tags/v4.4.1.tar.gz"
-targz_sha512sum = "e8a87c109ba917887483c73b0410bfd11f9259815ba7f9b967779963c9a7a5c208d70f0d6f6ae586ff371feeab3e19d96273137b42fd03a84ae08965bb8ea643"
-targz_root_dir = "h3-4.4.1"
+targz_url = "https://github.com/uber/h3/archive/refs/tags/v4.5.0.tar.gz"
+targz_sha512sum = "8b74989632e2f23ecd26098d1accf6289ab0aac025ed695eafc0919e450090f935990518d26cb5b2f01df180e60f1bf3896607bc39771808b63ffc87a18921e4"
+targz_root_dir = "h3-4.5.0"
 
 [features]
 default = ["uber_h3_from_scratch"]
