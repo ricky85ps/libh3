@@ -2,7 +2,8 @@
 name = "libh3"
 version = "0.2.4"
 authors = ["Rusty Conover <rusty@conover.me>", "Ricky <ricky85ps@web.de>"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.70"
 license = "MIT"
 repository = "https://github.com/ricky85ps/libh3.git"
 description = "Safe Rust Bindings to Uber's Hexagonal Hierarchical Spatial Index - H3"
