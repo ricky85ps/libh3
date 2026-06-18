@@ -1,0 +1,114 @@
+name: "deps: update uber h3 source metadata"
+
+sources:
+  h3Version:
+    name: Get latest H3 release version (API with non-API fallback)
+    kind: shell
+    spec:
+      shell: /bin/bash
+      environments:
+        - name: HTTP_PROXY
+        - name: HTTPS_PROXY
+        - name: NO_PROXY
+        - name: http_proxy
+        - name: https_proxy
+        - name: no_proxy
+      command: |
+        set -euo pipefail
+
+        extract_from_api() {
+          local json
+          json="$(curl -fsSL \
+            -H "User-Agent: updatecli-libh3" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/uber/h3/releases/latest 2>/dev/null || true)"
+          if [[ -n "${json}" ]]; then
+            printf '%s' "${json}" | tr -d '\n' | sed -nE 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v?([0-9]+\.[0-9]+\.[0-9]+)".*/\1/p'
+          fi
+        }
+
+        extract_from_non_api() {
+          local page version
+          page="$(curl -fsSL https://github.com/uber/h3/releases/latest 2>/dev/null || true)"
+
+          # Preferred: OpenGraph URL is explicit and stable on release pages.
+          version="$(printf '%s' "${page}" \
+            | tr -d '\n' \
+            | sed -nE 's#.*property="og:url" content="[^"]*/releases/tag/v?([0-9]+\.[0-9]+\.[0-9]+)".*#\1#p')"
+
+          # Fallback: match any releases/tag/vX.Y.Z occurrence in the HTML.
+          if [[ -z "${version}" ]]; then
+            version="$(printf '%s' "${page}" \
+              | grep -Eo 'releases/tag/v[0-9]+\.[0-9]+\.[0-9]+' \
+              | head -n1 \
+              | sed -E 's#.*v##' || true)"
+          fi
+
+          printf '%s\n' "${version}"
+        }
+
+        version="$(extract_from_api || true)"
+        if [[ -z "${version}" ]]; then
+          version="$(extract_from_non_api || true)"
+        fi
+
+        test -n "${version}" || {
+          echo "Could not determine latest H3 version via API or non-API fallback" >&2
+          exit 1
+        }
+
+        printf '%s\n' "${version}"
+
+  h3TarballSha512:
+    name: Compute sha512 for latest H3 tar.gz
+    kind: shell
+    spec:
+      shell: /bin/bash
+      environments:
+        - name: HTTP_PROXY
+        - name: HTTPS_PROXY
+        - name: NO_PROXY
+        - name: http_proxy
+        - name: https_proxy
+        - name: no_proxy
+      command: |
+        set -euo pipefail
+        curl -fsSL "https://github.com/uber/h3/archive/refs/tags/v{{ source "h3Version" }}.tar.gz" | sha512sum | awk '{print $1}'
+
+targets:
+  cargoH3TarballUrl:
+    name: "deps: update Cargo.toml h3 tarball URL"
+    kind: file
+    sourceid: h3Version
+    spec:
+      file: Cargo.toml
+      matchpattern: 'targz_url = "https://github.com/uber/h3/archive/refs/tags/v[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz"'
+      replacepattern: 'targz_url = "https://github.com/uber/h3/archive/refs/tags/v{{ source "h3Version" }}.tar.gz"'
+
+  cargoH3TarballSha512:
+    name: "deps: update Cargo.toml h3 tarball sha512"
+    kind: file
+    sourceid: h3TarballSha512
+    spec:
+      file: Cargo.toml
+      matchpattern: 'targz_sha512sum = "[a-f0-9]{128}"'
+      replacepattern: 'targz_sha512sum = "{{ source "h3TarballSha512" }}"'
+
+  cargoH3RootDir:
+    name: "deps: update Cargo.toml h3 source root dir"
+    kind: file
+    sourceid: h3Version
+    spec:
+      file: Cargo.toml
+      matchpattern: 'targz_root_dir = "h3-[0-9]+\.[0-9]+\.[0-9]+"'
+      replacepattern: 'targz_root_dir = "h3-{{ source "h3Version" }}"'
+
+  readmeH3CloneBranch:
+    name: "docs: update README H3 clone branch"
+    kind: file
+    sourceid: h3Version
+    spec:
+      file: README.md
+      matchpattern: 'git clone --depth=1 --branch v[0-9]+\.[0-9]+\.[0-9]+ https://github\.com/uber/h3\.git'
+      replacepattern: 'git clone --depth=1 --branch v{{ source "h3Version" }} https://github.com/uber/h3.git'
